@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.0.0"
+SCRIPT_VERSION="1.1.0"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
@@ -19,8 +19,10 @@ get_all_projects() {
     find /etc/apache2/sites-available /etc/nginx/sites-available -name "*.conf" 2>/dev/null -print0 | 
     while IFS= read -r -d $'\0' file; do
         local server_info=$(get_server_info "$file")
-        echo "$(basename "$file"):$server_info"
-    done | sort
+        if [[ ! "$file" =~ -le-ssl.conf$ ]]; then
+            echo "$server_info"
+        fi
+    done | sort -u
 }
 
 # Function to select a project with autocomplete
@@ -30,9 +32,37 @@ select_project() {
     select project in "${projects[@]}"; do
         if [[ -n $project ]]; then
             echo "You selected: $project"
+            show_project_details "$project"
             return
         fi
     done
+}
+
+# Function to show project details
+show_project_details() {
+    local selected_project="$1"
+    local config_files=($(find /etc/apache2/sites-available /etc/nginx/sites-available -name "*$selected_project*.conf" 2>/dev/null))
+    
+    echo "Project details for $selected_project:"
+    echo "Configuration files:"
+    for file in "${config_files[@]}"; do
+        echo "  - $(basename "$file")"
+    done
+    
+    local project_dir=$(get_project_directory "${config_files[0]}")
+    echo "Project directory: $project_dir"
+    
+    if [[ -f "${config_files[0]}" ]]; then
+        echo "Server configuration:"
+        grep -E "ServerName|ServerAlias|DocumentRoot|root" "${config_files[0]}" | sed 's/^/  /'
+    fi
+    
+    echo "Do you want to proceed with the backup? (y/n)"
+    read -r proceed
+    if [[ ! $proceed =~ ^[Yy]$ ]]; then
+        echo "Backup cancelled."
+        exit 0
+    fi
 }
 
 # Function to get project directory
@@ -103,15 +133,14 @@ main() {
 
     # Select project
     select_project
-    local selected_project=$(echo $project | cut -d':' -f1)
+    local selected_project="$project"
 
     # Get project directory
-    local config_file=$(find /etc/apache2/sites-available /etc/nginx/sites-available -name "$selected_project" 2>/dev/null | head -1)
+    local config_file=$(find /etc/apache2/sites-available /etc/nginx/sites-available -name "*$selected_project*.conf" 2>/dev/null | head -1)
     local project_dir=$(get_project_directory "$config_file")
-    echo "Project directory: $project_dir"
 
     # Create backup
-    local backup_name="${selected_project%.*}_$(date +%Y%m%d_%H%M%S).tar.gz"
+    local backup_name="${selected_project}_$(date +%Y%m%d_%H%M%S).tar.gz"
     echo "Creating backup..."
     tar -czvf "$backup_name" -C "$(dirname "$project_dir")" "$(basename "$project_dir")"
     echo "Backup created: $backup_name"
