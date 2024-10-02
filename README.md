@@ -35,16 +35,27 @@ After installation, you can run SiteVault by typing `site-vault` in your termina
 
 1. When you run `site-vault`, it will list all available projects from your Apache and Nginx configurations.
 2. Select a project from the list (you can type to filter the list).
-3. SiteVault will create a backup of the selected project.
-4. You'll be asked if you want to transfer the backup to another server.
-5. If you choose to transfer, you'll be prompted for the destination server details.
-6. After the transfer (if selected), you'll have the option to delete the local backup.
+3. SiteVault will display project details and ask for confirmation before proceeding.
+4. If confirmed, SiteVault will create a backup of the selected project.
+5. You'll be asked if you want to transfer the backup to another server.
+6. If you choose to transfer, you'll be prompted for the destination server details.
+7. After the transfer (if selected), you'll have the option to delete the local backup.
 
 ## Requirements
 
 - Bash shell
 - Apache2 or Nginx web server
 - SSH client (for remote transfers)
+
+## Changelog
+
+### Version 1.1.0
+
+- Improved project listing: Now shows only unique site names/aliases, grouping SSL and non-SSL configurations.
+- Enhanced project selection: Displays project details (configuration files, server configuration) before backup.
+- Added confirmation step: Users can now review project details and confirm before proceeding with the backup.
+- Updated backup naming: Backup files now use the site name instead of the configuration file name.
+- General code improvements and optimizations.
 
 ## Contributing
 
