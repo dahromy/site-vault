@@ -2,6 +2,7 @@
 
 SCRIPT_VERSION="1.0.0"
 SCRIPT_NAME="site-vault"
+GITHUB_REPO="https://raw.githubusercontent.com/yourusername/site-vault/main/site-vault.sh"
 
 # Function to get server name or alias
 get_server_info() {
@@ -52,8 +53,40 @@ get_project_directory() {
 # Function to check for updates
 check_for_updates() {
     echo "Checking for updates..."
-    # In a real-world scenario, this would compare the current version with the latest available version
-    echo "You are running the latest version of SiteVault."
+    local latest_version=$(curl -s "$GITHUB_REPO" | grep "SCRIPT_VERSION=" | cut -d'"' -f2)
+    if [[ "$latest_version" > "$SCRIPT_VERSION" ]]; then
+        echo "A new version ($latest_version) is available. You are currently on version $SCRIPT_VERSION."
+        read -p "Do you want to update? (y/n): " update_choice
+        if [[ $update_choice =~ ^[Yy]$ ]]; then
+            update_script
+        else
+            echo "Update cancelled. You can update later by running the script with the --update option."
+        fi
+    else
+        echo "You are running the latest version of SiteVault."
+    fi
+}
+
+# Function to update the script
+update_script() {
+    echo "Updating SiteVault..."
+    local temp_file=$(mktemp)
+    if curl -s "$GITHUB_REPO" -o "$temp_file"; then
+        if [[ -s "$temp_file" ]]; then
+            mv "$temp_file" "$0"
+            chmod +x "$0"
+            echo "Update successful. Please run the script again to use the new version."
+            exit 0
+        else
+            echo "Error: Downloaded file is empty. Update failed."
+            rm "$temp_file"
+            exit 1
+        fi
+    else
+        echo "Error: Failed to download the update. Please check your internet connection and try again."
+        rm "$temp_file"
+        exit 1
+    fi
 }
 
 # Main function
