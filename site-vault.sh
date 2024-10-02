@@ -2,7 +2,7 @@
 
 SCRIPT_VERSION="1.0.0"
 SCRIPT_NAME="site-vault"
-GITHUB_REPO="https://raw.githubusercontent.com/yourusername/site-vault/main/site-vault.sh"
+GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
 # Function to get server name or alias
 get_server_info() {
