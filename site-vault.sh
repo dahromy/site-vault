@@ -19,7 +19,7 @@ get_all_projects() {
     while IFS= read -r -d $'\0' file; do
         local server_info=$(get_server_info "$file")
         echo "$(basename "$file"):$server_info"
-    done
+    done | sort
 }
 
 # Function to select a project with autocomplete
