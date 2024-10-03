@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.1.8"
+SCRIPT_VERSION="1.1.9"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
@@ -92,9 +92,13 @@ get_project_directory() {
     if [ -z "$document_root" ]; then
         read -p "Couldn't find DocumentRoot automatically. Please enter the project directory: " project_dir
     else
-        # Check if the DocumentRoot ends with 'public'
-        if [[ "$document_root" == */public ]]; then
+        # Check if the DocumentRoot ends with 'public' or 'web'
+        if [[ "$document_root" == */public ]] || [[ "$document_root" == */web ]]; then
             project_dir=$(dirname "$document_root")
+            # Check if there's an additional subdirectory (like 'naomi' in the example)
+            if [[ "$project_dir" =~ .*/[^/]+/[^/]+$ ]]; then
+                project_dir=$(dirname "$project_dir")
+            fi
         else
             project_dir="$document_root"
         fi
