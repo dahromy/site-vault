@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.1.12"
+SCRIPT_VERSION="1.1.13"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
@@ -108,6 +108,11 @@ get_project_directory() {
 
         # Remove trailing slash if present
         project_dir="${project_dir%/}"
+
+        # If the last folder is 'public' or 'web', use the parent directory
+        if [[ "${project_dir##*/}" == "public" ]] || [[ "${project_dir##*/}" == "web" ]]; then
+            project_dir=$(dirname "$project_dir")
+        fi
         
         # Verify if the directory exists
         if [ ! -d "$project_dir" ]; then

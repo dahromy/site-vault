@@ -49,6 +49,13 @@ After installation, you can run SiteVault by typing `site-vault` in your termina
 
 ## Changelog
 
+### Version 1.1.13
+
+- Improved handling of projects where the DocumentRoot ends with 'public' or 'web' directories.
+- Enhanced the `get_project_directory` function to use the parent directory when 'public' or 'web' is detected as the last folder.
+- Fixed issues with backing up the correct project root for frameworks that use 'public' or 'web' as their public-facing directory.
+- Improved accuracy in identifying the correct project directory for various project structures.
+
 ### Version 1.1.12
 
 - Improved the `get_project_directory` function to handle a wider variety of directory structures.
