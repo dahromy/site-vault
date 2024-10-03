@@ -49,6 +49,12 @@ After installation, you can run SiteVault by typing `site-vault` in your termina
 
 ## Changelog
 
+### Version 1.1.1
+
+- Fixed a bug where selecting a project would show details for all projects with similar names.
+- Improved project selection to only show exact matches for the selected project.
+- Enhanced error handling when no configuration files are found for a selected project.
+
 ### Version 1.1.0
 
 - Improved project listing: Now shows only unique site names/aliases, grouping SSL and non-SSL configurations.

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.1.0"
+SCRIPT_VERSION="1.1.1"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
@@ -41,7 +41,7 @@ select_project() {
 # Function to show project details
 show_project_details() {
     local selected_project="$1"
-    local config_files=($(find /etc/apache2/sites-available /etc/nginx/sites-available -name "*$selected_project*.conf" 2>/dev/null))
+    local config_files=($(find /etc/apache2/sites-available /etc/nginx/sites-available -name "*$selected_project.conf" -o -name "*$selected_project-le-ssl.conf" 2>/dev/null))
     
     echo "Project details for $selected_project:"
     echo "Configuration files:"
@@ -49,6 +49,11 @@ show_project_details() {
         echo "  - $(basename "$file")"
     done
     
+    if [ ${#config_files[@]} -eq 0 ]; then
+        echo "No configuration files found for $selected_project"
+        exit 1
+    fi
+
     local project_dir=$(get_project_directory "${config_files[0]}")
     echo "Project directory: $project_dir"
     
@@ -136,7 +141,7 @@ main() {
     local selected_project="$project"
 
     # Get project directory
-    local config_file=$(find /etc/apache2/sites-available /etc/nginx/sites-available -name "*$selected_project*.conf" 2>/dev/null | head -1)
+    local config_file=$(find /etc/apache2/sites-available /etc/nginx/sites-available -name "$selected_project.conf" -o -name "$selected_project-le-ssl.conf" 2>/dev/null | head -1)
     local project_dir=$(get_project_directory "$config_file")
 
     # Create backup
