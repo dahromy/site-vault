@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.1.9"
+SCRIPT_VERSION="1.1.10"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
@@ -68,7 +68,7 @@ show_project_details() {
     done
 
     local config_to_use="${non_ssl_config:-$ssl_config}"
-    local project_dir=$(get_project_directory "$config_to_use")
+    local project_dir=$(get_project_directory "$config_to_use" "$selected_project")
     echo "Project directory: $project_dir"
     
     if [[ -f "$config_to_use" ]]; then
@@ -87,18 +87,25 @@ show_project_details() {
 # Function to get project directory
 get_project_directory() {
     local config_file="$1"
+    local selected_project="$2"
     local document_root=$(grep -i "DocumentRoot" "$config_file" 2>/dev/null | awk '{print $2}' | tr -d '"' | head -1)
     
     if [ -z "$document_root" ]; then
         read -p "Couldn't find DocumentRoot automatically. Please enter the project directory: " project_dir
     else
-        # Check if the DocumentRoot ends with 'public' or 'web'
-        if [[ "$document_root" == */public ]] || [[ "$document_root" == */web ]]; then
+        # Extract the base domain from the selected project
+        local base_domain=$(echo "$selected_project" | awk -F. '{print $(NF-1)"."$NF}')
+        
+        # Check if the DocumentRoot contains the base domain
+        if [[ "$document_root" == */prod/*"$base_domain"* ]]; then
+            # Find the directory that matches the selected project name
             project_dir=$(dirname "$document_root")
-            # Check if there's an additional subdirectory (like 'naomi' in the example)
-            if [[ "$project_dir" =~ .*/[^/]+/[^/]+$ ]]; then
+            while [[ "$project_dir" != "/" && "$project_dir" != "." ]]; do
+                if [[ "$(basename "$project_dir")" == "$selected_project" ]]; then
+                    break
+                fi
                 project_dir=$(dirname "$project_dir")
-            fi
+            done
         else
             project_dir="$document_root"
         fi
@@ -169,7 +176,7 @@ main() {
 
     # Get project directory
     local config_file=$(find /etc/apache2/sites-available -name "*$selected_project*.conf" -o -name "*www.$selected_project*.conf" 2>/dev/null | head -1)
-    local project_dir=$(get_project_directory "$config_file")
+    local project_dir=$(get_project_directory "$config_file" "$selected_project")
 
     # Create backup
     local backup_name="${selected_project}_$(date +%Y%m%d_%H%M%S).tar.gz"
