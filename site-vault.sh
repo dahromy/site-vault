@@ -1,26 +1,26 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.1.1"
+SCRIPT_VERSION="1.1.2"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
 # Function to get server name or alias
 get_server_info() {
     local config_file="$1"
-    local server_name=$(grep -i "ServerName" "$config_file" 2>/dev/null | awk '{print $2}' | head -1)
-    if [ -z "$server_name" ]; then
-        server_name=$(grep -i "ServerAlias" "$config_file" 2>/dev/null | awk '{print $2}' | head -1)
+    local server_alias=$(grep -i "ServerAlias" "$config_file" 2>/dev/null | awk '{$1=""; print $0}' | tr -s ' ' '\n')
+    if [ -n "$server_alias" ]; then
+        echo "$server_alias"
+    else
+        grep -i "ServerName" "$config_file" 2>/dev/null | awk '{print $2}' | head -1
     fi
-    echo "$server_name"
 }
 
 # Function to get all projects
 get_all_projects() {
     find /etc/apache2/sites-available /etc/nginx/sites-available -name "*.conf" 2>/dev/null -print0 | 
     while IFS= read -r -d $'\0' file; do
-        local server_info=$(get_server_info "$file")
         if [[ ! "$file" =~ -le-ssl.conf$ ]]; then
-            echo "$server_info"
+            get_server_info "$file"
         fi
     done | sort -u
 }
@@ -41,7 +41,7 @@ select_project() {
 # Function to show project details
 show_project_details() {
     local selected_project="$1"
-    local config_files=($(find /etc/apache2/sites-available /etc/nginx/sites-available -name "*$selected_project.conf" -o -name "*$selected_project-le-ssl.conf" 2>/dev/null))
+    local config_files=($(find /etc/apache2/sites-available /etc/nginx/sites-available -name "*.conf" 2>/dev/null | xargs grep -l -E "ServerName.*$selected_project|ServerAlias.*$selected_project"))
     
     echo "Project details for $selected_project:"
     echo "Configuration files:"
@@ -141,7 +141,7 @@ main() {
     local selected_project="$project"
 
     # Get project directory
-    local config_file=$(find /etc/apache2/sites-available /etc/nginx/sites-available -name "$selected_project.conf" -o -name "$selected_project-le-ssl.conf" 2>/dev/null | head -1)
+    local config_file=$(find /etc/apache2/sites-available /etc/nginx/sites-available -name "*.conf" 2>/dev/null | xargs grep -l -E "ServerName.*$selected_project|ServerAlias.*$selected_project" | head -1)
     local project_dir=$(get_project_directory "$config_file")
 
     # Create backup
