@@ -49,6 +49,13 @@ After installation, you can run SiteVault by typing `site-vault` in your termina
 
 ## Changelog
 
+### Version 1.1.6
+
+- Improved the logic for selecting the correct configuration file when multiple files match the selected project.
+- Enhanced the `show_project_details` function to display information from the most relevant configuration file.
+- Fixed issues with displaying server configurations for projects with multiple virtual hosts.
+- Improved accuracy in identifying the correct project directory for backup.
+
 ### Version 1.1.5
 
 - Improved the `get_server_info` function to handle ServerName and ServerAlias more accurately.

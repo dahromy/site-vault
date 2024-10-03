@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.1.5"
+SCRIPT_VERSION="1.1.6"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
@@ -65,12 +65,24 @@ show_project_details() {
         exit 1
     fi
 
-    local project_dir=$(get_project_directory "${config_files[0]}")
+    local correct_config_file=""
+    for file in "${config_files[@]}"; do
+        if grep -qE "ServerName\s+$selected_project|ServerAlias.*(^|\s)$selected_project(\s|$)" "$file"; then
+            correct_config_file="$file"
+            break
+        fi
+    done
+
+    if [ -z "$correct_config_file" ]; then
+        correct_config_file="${config_files[0]}"
+    fi
+
+    local project_dir=$(get_project_directory "$correct_config_file")
     echo "Project directory: $project_dir"
     
-    if [[ -f "${config_files[0]}" ]]; then
+    if [[ -f "$correct_config_file" ]]; then
         echo "Server configuration:"
-        grep -E "ServerName|ServerAlias|DocumentRoot|root" "${config_files[0]}" | sed 's/^/  /'
+        grep -E "ServerName|ServerAlias|DocumentRoot|root" "$correct_config_file" | sed 's/^/  /'
     fi
     
     echo "Do you want to proceed with the backup? (y/n)"
