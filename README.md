@@ -49,6 +49,14 @@ After installation, you can run SiteVault by typing `site-vault` in your termina
 
 ## Changelog
 
+### Version 1.1.3
+
+- Improved handling of ServerName and ServerAlias to correctly identify and list projects.
+- Added support for both www and non-www versions of domains in the project list.
+- Enhanced project selection to match both www and non-www versions of domains.
+- Fixed issues with project details display for domains with or without www prefix.
+- Improved accuracy in identifying the correct configuration file for selected projects.
+
 ### Version 1.1.2
 
 - Improved handling of ServerName and ServerAlias in Apache configurations.
