@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.1.6"
+SCRIPT_VERSION="1.1.7"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
@@ -8,31 +8,24 @@ GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vaul
 get_server_info() {
     local config_file="$1"
     local server_name=$(grep -i "ServerName" "$config_file" 2>/dev/null | awk '{print $2}' | head -1)
-    local server_alias=$(grep -i "ServerAlias" "$config_file" 2>/dev/null | awk '{$1=""; print $0}' | tr -s ' ' '\n' | head -1)
+    local server_alias=$(grep -i "ServerAlias" "$config_file" 2>/dev/null | awk '{$1=""; print $0}' | tr -s ' ' '\n')
     
-    if [ -n "$server_name" ] && [ -n "$server_alias" ]; then
-        if [[ "$server_name" == www.* ]]; then
-            echo "$server_name"
-        elif [[ "$server_alias" == www.* ]]; then
-            echo "$server_alias"
-        else
-            echo "$server_name"
-        fi
-    elif [ -n "$server_name" ]; then
+    if [ -n "$server_name" ]; then
         echo "$server_name"
-    elif [ -n "$server_alias" ]; then
+    fi
+    if [ -n "$server_alias" ]; then
         echo "$server_alias"
     fi
 }
 
 # Function to get all projects
 get_all_projects() {
-    find /etc/apache2/sites-available /etc/nginx/sites-available -name "*.conf" 2>/dev/null -print0 | 
+    find /etc/apache2/sites-available -name "*.conf" 2>/dev/null -print0 | 
     while IFS= read -r -d $'\0' file; do
         if [[ ! "$file" =~ -le-ssl.conf$ ]]; then
             get_server_info "$file"
         fi
-    done | sort -u | sed '/^$/d'
+    done | sort -u | sed '/^$/d' | sed 's/^www\.//'
 }
 
 # Function to select a project with autocomplete
@@ -51,8 +44,7 @@ select_project() {
 # Function to show project details
 show_project_details() {
     local selected_project="$1"
-    local base_domain="${selected_project#www.}"
-    local config_files=($(find /etc/apache2/sites-available /etc/nginx/sites-available -name "*.conf" 2>/dev/null | xargs grep -l -E "ServerName\s+($selected_project|$base_domain)|ServerAlias.*(^|\s)($selected_project|$base_domain)(\s|$)"))
+    local config_files=($(find /etc/apache2/sites-available -name "*$selected_project*.conf" -o -name "*www.$selected_project*.conf" 2>/dev/null))
     
     echo "Project details for $selected_project:"
     echo "Configuration files:"
@@ -65,24 +57,23 @@ show_project_details() {
         exit 1
     fi
 
-    local correct_config_file=""
+    local non_ssl_config=""
+    local ssl_config=""
     for file in "${config_files[@]}"; do
-        if grep -qE "ServerName\s+$selected_project|ServerAlias.*(^|\s)$selected_project(\s|$)" "$file"; then
-            correct_config_file="$file"
-            break
+        if [[ "$file" =~ -le-ssl.conf$ ]]; then
+            ssl_config="$file"
+        else
+            non_ssl_config="$file"
         fi
     done
 
-    if [ -z "$correct_config_file" ]; then
-        correct_config_file="${config_files[0]}"
-    fi
-
-    local project_dir=$(get_project_directory "$correct_config_file")
+    local config_to_use="${non_ssl_config:-$ssl_config}"
+    local project_dir=$(get_project_directory "$config_to_use")
     echo "Project directory: $project_dir"
     
-    if [[ -f "$correct_config_file" ]]; then
+    if [[ -f "$config_to_use" ]]; then
         echo "Server configuration:"
-        grep -E "ServerName|ServerAlias|DocumentRoot|root" "$correct_config_file" | sed 's/^/  /'
+        grep -E "ServerName|ServerAlias|DocumentRoot" "$config_to_use" | sed 's/^/  /'
     fi
     
     echo "Do you want to proceed with the backup? (y/n)"
@@ -96,12 +87,8 @@ show_project_details() {
 # Function to get project directory
 get_project_directory() {
     local config_file="$1"
-    local directory=""
-    if [[ "$config_file" == *"apache2"* ]]; then
-        directory=$(grep -i "DocumentRoot" "$config_file" 2>/dev/null | awk '{print $2}' | tr -d '"')
-    elif [[ "$config_file" == *"nginx"* ]]; then
-        directory=$(grep -i "root" "$config_file" 2>/dev/null | awk '{print $2}' | tr -d ';\r')
-    fi
+    local directory=$(grep -i "DocumentRoot" "$config_file" 2>/dev/null | awk '{print $2}' | tr -d '"' | head -1)
+    
     if [ -z "$directory" ]; then
         read -p "Couldn't find directory automatically. Please enter the project directory: " directory
     fi
@@ -164,8 +151,7 @@ main() {
     local selected_project="$project"
 
     # Get project directory
-    local base_domain="${selected_project#www.}"
-    local config_file=$(find /etc/apache2/sites-available /etc/nginx/sites-available -name "*.conf" 2>/dev/null | xargs grep -l -E "ServerName\s+($selected_project|$base_domain)|ServerAlias.*(^|\s)($selected_project|$base_domain)(\s|$)" | head -1)
+    local config_file=$(find /etc/apache2/sites-available -name "*$selected_project*.conf" -o -name "*www.$selected_project*.conf" 2>/dev/null | head -1)
     local project_dir=$(get_project_directory "$config_file")
 
     # Create backup

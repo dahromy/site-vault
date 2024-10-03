@@ -33,7 +33,7 @@ After installation, you can run SiteVault by typing `site-vault` in your termina
 
 ### Backup Process
 
-1. When you run `site-vault`, it will list all available projects from your Apache and Nginx configurations.
+1. When you run `site-vault`, it will list all available projects from your Apache configurations.
 2. Select a project from the list (you can type to filter the list).
 3. SiteVault will display project details and ask for confirmation before proceeding.
 4. If confirmed, SiteVault will create a backup of the selected project.
@@ -44,10 +44,19 @@ After installation, you can run SiteVault by typing `site-vault` in your termina
 ## Requirements
 
 - Bash shell
-- Apache2 or Nginx web server
+- Apache2 web server
 - SSH client (for remote transfers)
 
 ## Changelog
+
+### Version 1.1.7
+
+- Improved parsing of ServerName and ServerAlias in configuration files.
+- Enhanced handling of SSL and non-SSL configurations.
+- Improved accuracy in identifying the DocumentRoot for each project.
+- Updated project listing to remove 'www.' prefix for consistency.
+- Enhanced project selection to match both www and non-www versions of domains.
+- Improved error handling when no configuration files are found for a selected project.
 
 ### Version 1.1.6
 
