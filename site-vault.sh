@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.1.7"
+SCRIPT_VERSION="1.1.8"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
@@ -87,12 +87,25 @@ show_project_details() {
 # Function to get project directory
 get_project_directory() {
     local config_file="$1"
-    local directory=$(grep -i "DocumentRoot" "$config_file" 2>/dev/null | awk '{print $2}' | tr -d '"' | head -1)
+    local document_root=$(grep -i "DocumentRoot" "$config_file" 2>/dev/null | awk '{print $2}' | tr -d '"' | head -1)
     
-    if [ -z "$directory" ]; then
-        read -p "Couldn't find directory automatically. Please enter the project directory: " directory
+    if [ -z "$document_root" ]; then
+        read -p "Couldn't find DocumentRoot automatically. Please enter the project directory: " project_dir
+    else
+        # Check if the DocumentRoot ends with 'public'
+        if [[ "$document_root" == */public ]]; then
+            project_dir=$(dirname "$document_root")
+        else
+            project_dir="$document_root"
+        fi
+        
+        # Verify if the directory exists
+        if [ ! -d "$project_dir" ]; then
+            echo "Warning: The directory $project_dir does not exist."
+            read -p "Please enter the correct project directory: " project_dir
+        fi
     fi
-    echo "$directory"
+    echo "$project_dir"
 }
 
 # Function to check for updates
