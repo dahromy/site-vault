@@ -49,6 +49,21 @@ After installation, you can run SiteVault by typing `site-vault` in your termina
 
 ## Changelog
 
+### Version 1.1.5
+
+- Improved the `get_server_info` function to handle ServerName and ServerAlias more accurately.
+- Prioritized www versions of domains when both ServerName and ServerAlias are present.
+- Enhanced logic to select the most appropriate domain name for each project.
+- Improved handling of configurations with multiple ServerAlias entries.
+
+### Version 1.1.4
+
+- Fixed issues with unnecessary www prefixes being added to domain names.
+- Improved project listing to show domains exactly as they appear in server configurations.
+- Enhanced matching logic for ServerName and ServerAlias to ensure correct project selection.
+- Optimized the get_server_info function to prioritize ServerName over ServerAlias.
+- Improved error handling and empty line filtering in the project list.
+
 ### Version 1.1.3
 
 - Improved handling of ServerName and ServerAlias to correctly identify and list projects.
