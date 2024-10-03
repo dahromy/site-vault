@@ -49,9 +49,17 @@ After installation, you can run SiteVault by typing `site-vault` in your termina
 
 ## Changelog
 
+### Version 1.1.11
+
+- Fixed a critical bug in the `get_project_directory` function that was causing incorrect project directory identification.
+- Improved handling of subdomains in project directory detection.
+- Enhanced logic to correctly identify project directories for complex structures (e.g., naomi.aty-aminay.com).
+- Added fallback to use the parent of DocumentRoot if the subdomain is not found in the path.
+- Improved error handling and user prompts for manual directory input when automatic detection fails.
+
 ### Version 1.1.10
 
-- Improved the `get_project_directory` function to correctly identify project directories for complex structures (e.g., naomi.aty-aminay.com).
+- Improved the `get_project_directory` function to correctly identify project directories for complex structures.
 - Enhanced logic to handle cases where the project name is a subdirectory within the DocumentRoot.
 - Added support for projects with multiple subdomains and varying directory structures.
 - Improved accuracy in identifying the correct project root directory for backup.
