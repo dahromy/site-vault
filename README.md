@@ -49,6 +49,14 @@ After installation, you can run SiteVault by typing `site-vault` in your termina
 
 ## Changelog
 
+### Version 1.1.12
+
+- Improved the `get_project_directory` function to handle a wider variety of directory structures.
+- Enhanced logic to correctly identify project directories for sites like rock.aty-aminay.com.
+- Added support for cases where the DocumentRoot doesn't contain the subdomain or domain name.
+- Improved handling of trailing slashes in directory paths.
+- Further refined the project directory detection process based on real-world Apache configurations.
+
 ### Version 1.1.11
 
 - Fixed a critical bug in the `get_project_directory` function that was causing incorrect project directory identification.

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.1.11"
+SCRIPT_VERSION="1.1.12"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
@@ -93,23 +93,21 @@ get_project_directory() {
     if [ -z "$document_root" ]; then
         read -p "Couldn't find DocumentRoot automatically. Please enter the project directory: " project_dir
     else
-        # Extract the subdomain from the selected project
-        local subdomain=$(echo "$selected_project" | awk -F. '{print $1}')
-        
-        # Check if the DocumentRoot contains the subdomain
-        if [[ "$document_root" == *"$subdomain"* ]]; then
-            # Find the directory that matches the subdomain
-            project_dir=$(dirname "$document_root")
-            while [[ "$project_dir" != "/" && "$project_dir" != "." ]]; do
-                if [[ "$(basename "$project_dir")" == "$subdomain" ]]; then
-                    break
-                fi
-                project_dir=$(dirname "$project_dir")
-            done
+        # Extract the subdomain and domain parts
+        IFS='.' read -ra ADDR <<< "$selected_project"
+        local subdomain="${ADDR[0]}"
+        local domain="${ADDR[1]}.${ADDR[2]}"
+
+        # Check if the DocumentRoot contains the subdomain or domain
+        if [[ "$document_root" == *"$subdomain"* ]] || [[ "$document_root" == *"$domain"* ]]; then
+            project_dir="$document_root"
         else
-            # If subdomain is not in the path, use the parent of DocumentRoot
+            # If not, use the parent directory of DocumentRoot
             project_dir=$(dirname "$document_root")
         fi
+
+        # Remove trailing slash if present
+        project_dir="${project_dir%/}"
         
         # Verify if the directory exists
         if [ ! -d "$project_dir" ]; then
