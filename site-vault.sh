@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.1.13"
+SCRIPT_VERSION="1.1.14"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
@@ -44,7 +44,14 @@ select_project() {
 # Function to show project details
 show_project_details() {
     local selected_project="$1"
-    local config_files=($(find /etc/apache2/sites-available -name "*$selected_project*.conf" -o -name "*www.$selected_project*.conf" 2>/dev/null))
+    local www_config_file=$(find /etc/apache2/sites-available -name "www.$selected_project.conf" 2>/dev/null)
+    local config_files=()
+    
+    if [ -n "$www_config_file" ]; then
+        config_files=("$www_config_file")
+    else
+        config_files=($(find /etc/apache2/sites-available -name "*$selected_project*.conf" 2>/dev/null))
+    fi
     
     echo "Project details for $selected_project:"
     echo "Configuration files:"
