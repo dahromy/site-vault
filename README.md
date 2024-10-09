@@ -1,10 +1,10 @@
 # SiteVault
 
-SiteVault is a powerful and user-friendly tool for backing up and transferring website projects. It supports Apache configurations, making it versatile for various web server setups.
+SiteVault is a powerful and user-friendly tool for backing up and transferring website projects. It supports Apache and Nginx configurations, making it versatile for various web server setups.
 
 ## Features
 
-- Automatic detection of Apache site configurations
+- Automatic detection of Apache and Nginx site configurations
 - Interactive project selection with autocomplete functionality
 - Easy backup creation with timestamp
 - Option to transfer backups to remote servers
@@ -33,7 +33,7 @@ After installation, you can run SiteVault by typing `site-vault` in your termina
 
 ### Backup Process
 
-1. When you run `site-vault`, it will list all available projects from your Apache configurations.
+1. When you run `site-vault`, it will list all available projects from your Apache and Nginx configurations.
 2. Select a project from the list (you can type to filter the list).
 3. SiteVault will display project details and ask for confirmation before proceeding.
 4. If confirmed, SiteVault will create a backup of the selected project.
@@ -44,10 +44,17 @@ After installation, you can run SiteVault by typing `site-vault` in your termina
 ## Requirements
 
 - Bash shell
-- Apache2 web server
+- Apache2 or Nginx web server
 - SSH client (for remote transfers)
 
 ## Changelog
+
+### Version 1.2.1
+
+- Fixed issue with duplicate sites appearing in the project list.
+- Added a confirmation step before creating a backup, allowing users to review and confirm the selected project details.
+- Improved the `get_all_projects()` function to remove duplicates and provide a cleaner list of available sites.
+- Enhanced user interaction by adding a clear confirmation prompt before proceeding with the backup process.
 
 ### Version 1.2.0
 

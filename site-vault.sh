@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.2.0"
+SCRIPT_VERSION="1.2.1"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
@@ -23,22 +23,24 @@ get_server_info() {
 
 # Function to get all projects
 get_all_projects() {
-    # Apache configurations
-    find /etc/apache2/sites-available -name "*.conf" 2>/dev/null -print0 | 
-    while IFS= read -r -d $'\0' file; do
-        if [[ ! "$file" =~ -le-ssl.conf$ ]]; then
-            get_server_info "$file"
-        fi
-    done
+    {
+        # Apache configurations
+        find /etc/apache2/sites-available -name "*.conf" 2>/dev/null -print0 | 
+        while IFS= read -r -d $'\0' file; do
+            if [[ ! "$file" =~ -le-ssl.conf$ ]]; then
+                get_server_info "$file"
+            fi
+        done
 
-    # Nginx configurations
-    find /etc/nginx/sites-available -type f 2>/dev/null -print0 |
-    while IFS= read -r -d $'\0' file; do
-        local server_name=$(grep -i "server_name" "$file" 2>/dev/null | awk '{print $2}' | tr -d ';' | head -1)
-        if [ -n "$server_name" ]; then
-            echo "$server_name"
-        fi
-    done | sort -u | sed '/^$/d' | sed 's/^www\.//'
+        # Nginx configurations
+        find /etc/nginx/sites-available -type f 2>/dev/null -print0 |
+        while IFS= read -r -d $'\0' file; do
+            local server_name=$(grep -i "server_name" "$file" 2>/dev/null | awk '{print $2}' | tr -d ';' | head -1)
+            if [ -n "$server_name" ]; then
+                echo "$server_name"
+            fi
+        done
+    } | sort -u | sed '/^$/d' | sed 's/^www\.//'
 }
 
 # Function to select a project with autocomplete
@@ -189,6 +191,13 @@ main() {
     # Get project directory
     local config_file=$(find /etc/apache2/sites-available /etc/nginx/sites-available -name "*$selected_project*.conf" -o -name "*www.$selected_project*.conf" 2>/dev/null | grep -v "ssl" | head -1)
     local project_dir=$(get_project_directory "$config_file" "$selected_project")
+
+    # Confirmation step
+    read -p "Do you want to proceed with the backup of $selected_project? (y/n): " confirm_backup
+    if [[ ! $confirm_backup =~ ^[Yy]$ ]]; then
+        echo "Backup cancelled."
+        exit 0
+    fi
 
     # Create backup
     local timestamp=$(date +%Y%m%d_%H%M%S)
