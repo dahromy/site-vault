@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.1.14"
+SCRIPT_VERSION="1.1.15"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
@@ -82,13 +82,6 @@ show_project_details() {
         echo "Server configuration:"
         grep -E "ServerName|ServerAlias|DocumentRoot" "$config_to_use" | sed 's/^/  /'
     fi
-    
-    echo "Do you want to proceed with the backup? (y/n)"
-    read -r proceed
-    if [[ ! $proceed =~ ^[Yy]$ ]]; then
-        echo "Backup cancelled."
-        exit 0
-    fi
 }
 
 # Function to get project directory
@@ -169,15 +162,48 @@ update_script() {
     fi
 }
 
+# Function to create backup
+create_backup() {
+    local project_dir="$1"
+    local backup_dir="$2"
+    local selected_project="$3"
+
+    # Create backup directory if it doesn't exist
+    mkdir -p "$backup_dir"
+
+    local backup_name="${backup_dir}/${selected_project}_$(date +%Y%m%d_%H%M%S).tar.gz"
+    echo "Creating backup..."
+    tar -czvf "$backup_name" -C "$(dirname "$project_dir")" "$(basename "$project_dir")"
+    echo "Backup created: $backup_name"
+    
+    echo "$backup_name"
+}
+
 # Main function
 main() {
-    if [[ "$1" == "--version" ]]; then
-        echo "SiteVault version $SCRIPT_VERSION"
-        exit 0
-    elif [[ "$1" == "--update" ]]; then
-        check_for_updates
-        exit 0
-    fi
+    local backup_dir="/var/backups/site-vault"
+
+    # Parse command-line options
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --version)
+                echo "SiteVault version $SCRIPT_VERSION"
+                exit 0
+                ;;
+            --update)
+                check_for_updates
+                exit 0
+                ;;
+            --backup-dir)
+                backup_dir="$2"
+                shift 2
+                ;;
+            *)
+                echo "Unknown option: $1"
+                exit 1
+                ;;
+        esac
+    done
 
     echo "Welcome to SiteVault v$SCRIPT_VERSION!"
 
@@ -190,10 +216,14 @@ main() {
     local project_dir=$(get_project_directory "$config_file" "$selected_project")
 
     # Create backup
-    local backup_name="${selected_project}_$(date +%Y%m%d_%H%M%S).tar.gz"
-    echo "Creating backup..."
-    tar -czvf "$backup_name" -C "$(dirname "$project_dir")" "$(basename "$project_dir")"
-    echo "Backup created: $backup_name"
+    echo "Do you want to proceed with the backup? (y/n)"
+    read -r proceed
+    if [[ $proceed =~ ^[Yy]$ ]]; then
+        local backup_file=$(create_backup "$project_dir" "$backup_dir" "$selected_project")
+    else
+        echo "Backup cancelled."
+        exit 0
+    fi
 
     # Ask about transfer
     read -p "Do you want to transfer this backup to another server? (y/n): " transfer_choice
@@ -206,7 +236,7 @@ main() {
 
         # Transfer file
         echo "Transferring file..."
-        scp -P "$server_port" "$backup_name" "$server_user@$server_ip:$dest_folder/"
+        scp -P "$server_port" "$backup_file" "$server_user@$server_ip:$dest_folder/"
         if [ $? -eq 0 ]; then
             echo "Transfer completed successfully!"
         else
@@ -216,7 +246,7 @@ main() {
         # Ask about deleting local backup
         read -p "Do you want to delete the local backup file? (y/n): " delete_choice
         if [[ $delete_choice =~ ^[Yy]$ ]]; then
-            rm "$backup_name"
+            rm "$backup_file"
             echo "Local backup deleted."
         fi
     else
