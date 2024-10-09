@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.2.1"
+SCRIPT_VERSION="1.3.0"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
@@ -172,18 +172,58 @@ update_script() {
     fi
 }
 
-# Main function
-main() {
-    if [[ "$1" == "--version" ]]; then
-        echo "SiteVault version $SCRIPT_VERSION"
-        exit 0
-    elif [[ "$1" == "--update" ]]; then
-        check_for_updates
-        exit 0
+# Function to backup MySQL databases
+backup_mysql_databases() {
+    local mysql_user
+    local mysql_password
+    local mysql_host="localhost"
+    local output_dir="mysql_exports"
+
+    # Ask for MySQL credentials
+    read -p "Enter MySQL username: " mysql_user
+    read -s -p "Enter MySQL password: " mysql_password
+    echo
+
+    # Create output directory if it doesn't exist
+    mkdir -p "$output_dir"
+
+    # Get list of databases
+    local databases=($(mysql -u "$mysql_user" -p"$mysql_password" -h "$mysql_host" -e "SHOW DATABASES;" | grep -Ev "(Database|information_schema|performance_schema|mysql|sys)"))
+
+    echo "Available databases:"
+    for i in "${!databases[@]}"; do
+        echo "$((i+1)). ${databases[i]}"
+    done
+
+    # Ask user to select databases
+    read -p "Enter the numbers of the databases to backup (separated by space), or 'all' for all databases: " selection
+
+    local selected_dbs=()
+    if [[ "$selection" == "all" ]]; then
+        selected_dbs=("${databases[@]}")
+    else
+        for num in $selection; do
+            if [[ "$num" =~ ^[0-9]+$ ]] && [ "$num" -ge 1 ] && [ "$num" -le "${#databases[@]}" ]; then
+                selected_dbs+=("${databases[$((num-1))]}")
+            fi
+        done
     fi
 
-    echo "Welcome to SiteVault v$SCRIPT_VERSION!"
+    # Backup selected databases
+    for db in "${selected_dbs[@]}"; do
+        echo "Exporting $db..."
+        mysqldump -u "$mysql_user" -p"$mysql_password" -h "$mysql_host" \
+            --routines --events --triggers \
+            --set-gtid-purged=OFF \
+            --single-transaction \
+            --databases "$db" > "$output_dir/${db}.sql"
+    done
 
+    echo "Database export completed. Files are in the $output_dir directory."
+}
+
+# Function to backup website files
+backup_website_files() {
     # Select project
     select_project
     local selected_project="$project"
@@ -196,7 +236,7 @@ main() {
     read -p "Do you want to proceed with the backup of $selected_project? (y/n): " confirm_backup
     if [[ ! $confirm_backup =~ ^[Yy]$ ]]; then
         echo "Backup cancelled."
-        exit 0
+        return
     fi
 
     # Create backup
@@ -233,6 +273,43 @@ main() {
     else
         echo "Backup not transferred. File is saved locally."
     fi
+}
+
+# Main function
+main() {
+    if [[ "$1" == "--version" ]]; then
+        echo "SiteVault version $SCRIPT_VERSION"
+        exit 0
+    elif [[ "$1" == "--update" ]]; then
+        check_for_updates
+        exit 0
+    fi
+
+    echo "Welcome to SiteVault v$SCRIPT_VERSION!"
+
+    # Ask user what they want to backup
+    echo "What would you like to backup?"
+    echo "1. Website files"
+    echo "2. MySQL databases"
+    echo "3. Both website files and MySQL databases"
+    read -p "Enter your choice (1/2/3): " backup_choice
+
+    case $backup_choice in
+        1)
+            backup_website_files
+            ;;
+        2)
+            backup_mysql_databases
+            ;;
+        3)
+            backup_website_files
+            backup_mysql_databases
+            ;;
+        *)
+            echo "Invalid choice. Exiting."
+            exit 1
+            ;;
+    esac
 
     echo "Script completed. Goodbye!"
 }

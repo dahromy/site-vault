@@ -1,15 +1,16 @@
 # SiteVault
 
-SiteVault is a powerful and user-friendly tool for backing up and transferring website projects. It supports Apache and Nginx configurations, making it versatile for various web server setups.
+SiteVault is a powerful and user-friendly tool for backing up and transferring website projects and databases. It supports Apache and Nginx configurations, making it versatile for various web server setups.
 
 ## Features
 
 - Automatic detection of Apache and Nginx site configurations
 - Interactive project selection with autocomplete functionality
-- Easy backup creation with timestamp
+- Easy backup creation with timestamp for both website files and MySQL databases
 - Option to transfer backups to remote servers
 - Support for custom SSH ports
 - Version checking and update mechanism
+- MySQL database backup functionality with selective database backup option
 
 ## Installation
 
@@ -33,21 +34,43 @@ After installation, you can run SiteVault by typing `site-vault` in your termina
 
 ### Backup Process
 
-1. When you run `site-vault`, it will list all available projects from your Apache and Nginx configurations.
-2. Select a project from the list (you can type to filter the list).
-3. SiteVault will display project details and ask for confirmation before proceeding.
-4. If confirmed, SiteVault will create a backup of the selected project.
-5. You'll be asked if you want to transfer the backup to another server.
-6. If you choose to transfer, you'll be prompted for the destination server details.
-7. After the transfer (if selected), you'll have the option to delete the local backup.
+1. When you run `site-vault`, you'll be prompted to choose what you want to backup:
+   - Website files
+   - MySQL databases
+   - Both website files and MySQL databases
+
+2. For website files backup:
+   - SiteVault will list all available projects from your Apache and Nginx configurations.
+   - Select a project from the list (you can type to filter the list).
+   - SiteVault will display project details and ask for confirmation before proceeding.
+   - If confirmed, SiteVault will create a backup of the selected project.
+   - You'll be asked if you want to transfer the backup to another server.
+   - If you choose to transfer, you'll be prompted for the destination server details.
+   - After the transfer (if selected), you'll have the option to delete the local backup.
+
+3. For MySQL database backup:
+   - You'll be prompted to enter MySQL credentials.
+   - SiteVault will display a list of available databases.
+   - You can choose to backup all databases or select specific ones.
+   - The selected databases will be exported to SQL files in the `mysql_exports` directory.
 
 ## Requirements
 
 - Bash shell
 - Apache2 or Nginx web server
+- MySQL server (for database backups)
 - SSH client (for remote transfers)
 
 ## Changelog
+
+### Version 1.3.0
+
+- Added MySQL database backup functionality.
+- Implemented user interaction for MySQL credentials.
+- Added option to backup all databases or select specific ones.
+- Integrated database backup process with existing file backup functionality.
+- Updated main menu to allow users to choose between file backup, database backup, or both.
+- Improved error handling for database operations.
 
 ### Version 1.2.1
 
@@ -191,7 +214,7 @@ If you encounter any problems or have any questions, please open an issue in thi
 ## Acknowledgments
 
 - Thanks to all contributors who have helped shape SiteVault
-- Inspired by the need for an easy-to-use backup solution for web projects
+- Inspired by the need for an easy-to-use backup solution for web projects and databases
 
 ---
 
