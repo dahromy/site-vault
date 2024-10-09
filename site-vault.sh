@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCRIPT_VERSION="1.1.15"
+SCRIPT_VERSION="1.2.0"
 SCRIPT_NAME="site-vault"
 GITHUB_REPO="https://raw.githubusercontent.com/dahromy/site-vault/main/site-vault.sh"
 
@@ -10,20 +10,33 @@ get_server_info() {
     local server_name=$(grep -i "ServerName" "$config_file" 2>/dev/null | awk '{print $2}' | head -1)
     local server_alias=$(grep -i "ServerAlias" "$config_file" 2>/dev/null | awk '{$1=""; print $0}' | tr -s ' ' '\n')
     
-    if [ -n "$server_name" ]; then
+    # Prioritize www prefixed ServerName or ServerAlias
+    local www_name=$(echo -e "$server_name\n$server_alias" | grep -i "^www\." | head -1)
+    if [ -n "$www_name" ]; then
+        echo "$www_name"
+    elif [ -n "$server_name" ]; then
         echo "$server_name"
-    fi
-    if [ -n "$server_alias" ]; then
-        echo "$server_alias"
+    elif [ -n "$server_alias" ]; then
+        echo "$server_alias" | head -1
     fi
 }
 
 # Function to get all projects
 get_all_projects() {
+    # Apache configurations
     find /etc/apache2/sites-available -name "*.conf" 2>/dev/null -print0 | 
     while IFS= read -r -d $'\0' file; do
         if [[ ! "$file" =~ -le-ssl.conf$ ]]; then
             get_server_info "$file"
+        fi
+    done
+
+    # Nginx configurations
+    find /etc/nginx/sites-available -type f 2>/dev/null -print0 |
+    while IFS= read -r -d $'\0' file; do
+        local server_name=$(grep -i "server_name" "$file" 2>/dev/null | awk '{print $2}' | tr -d ';' | head -1)
+        if [ -n "$server_name" ]; then
+            echo "$server_name"
         fi
     done | sort -u | sed '/^$/d' | sed 's/^www\.//'
 }
@@ -44,13 +57,13 @@ select_project() {
 # Function to show project details
 show_project_details() {
     local selected_project="$1"
-    local www_config_file=$(find /etc/apache2/sites-available -name "www.$selected_project.conf" 2>/dev/null)
+    local www_config_file=$(find /etc/apache2/sites-available /etc/nginx/sites-available -name "www.$selected_project.conf" 2>/dev/null)
     local config_files=()
     
     if [ -n "$www_config_file" ]; then
         config_files=("$www_config_file")
     else
-        config_files=($(find /etc/apache2/sites-available -name "*$selected_project*.conf" 2>/dev/null))
+        config_files=($(find /etc/apache2/sites-available /etc/nginx/sites-available -name "*$selected_project*.conf" 2>/dev/null))
     fi
     
     echo "Project details for $selected_project:"
@@ -67,7 +80,7 @@ show_project_details() {
     local non_ssl_config=""
     local ssl_config=""
     for file in "${config_files[@]}"; do
-        if [[ "$file" =~ -le-ssl.conf$ ]]; then
+        if [[ "$file" =~ -le-ssl.conf$ ]] || [[ "$file" =~ ssl.conf$ ]]; then
             ssl_config="$file"
         else
             non_ssl_config="$file"
@@ -80,7 +93,7 @@ show_project_details() {
     
     if [[ -f "$config_to_use" ]]; then
         echo "Server configuration:"
-        grep -E "ServerName|ServerAlias|DocumentRoot" "$config_to_use" | sed 's/^/  /'
+        grep -E "ServerName|ServerAlias|DocumentRoot|server_name|root" "$config_to_use" | sed 's/^/  /'
     fi
 }
 
@@ -88,23 +101,18 @@ show_project_details() {
 get_project_directory() {
     local config_file="$1"
     local selected_project="$2"
-    local document_root=$(grep -i "DocumentRoot" "$config_file" 2>/dev/null | awk '{print $2}' | tr -d '"' | head -1)
+    local document_root=""
+    
+    if [[ "$config_file" == *"/apache2/"* ]]; then
+        document_root=$(grep -i "DocumentRoot" "$config_file" 2>/dev/null | awk '{print $2}' | tr -d '"' | head -1)
+    elif [[ "$config_file" == *"/nginx/"* ]]; then
+        document_root=$(grep -i "root" "$config_file" 2>/dev/null | awk '{print $2}' | tr -d ';' | head -1)
+    fi
     
     if [ -z "$document_root" ]; then
         read -p "Couldn't find DocumentRoot automatically. Please enter the project directory: " project_dir
     else
-        # Extract the subdomain and domain parts
-        IFS='.' read -ra ADDR <<< "$selected_project"
-        local subdomain="${ADDR[0]}"
-        local domain="${ADDR[1]}.${ADDR[2]}"
-
-        # Check if the DocumentRoot contains the subdomain or domain
-        if [[ "$document_root" == *"$subdomain"* ]] || [[ "$document_root" == *"$domain"* ]]; then
-            project_dir="$document_root"
-        else
-            # If not, use the parent directory of DocumentRoot
-            project_dir=$(dirname "$document_root")
-        fi
+        project_dir="$document_root"
 
         # Remove trailing slash if present
         project_dir="${project_dir%/}"
@@ -162,48 +170,15 @@ update_script() {
     fi
 }
 
-# Function to create backup
-create_backup() {
-    local project_dir="$1"
-    local backup_dir="$2"
-    local selected_project="$3"
-
-    # Create backup directory if it doesn't exist
-    mkdir -p "$backup_dir"
-
-    local backup_name="${backup_dir}/${selected_project}_$(date +%Y%m%d_%H%M%S).tar.gz"
-    echo "Creating backup..."
-    tar -czvf "$backup_name" -C "$(dirname "$project_dir")" "$(basename "$project_dir")"
-    echo "Backup created: $backup_name"
-    
-    echo "$backup_name"
-}
-
 # Main function
 main() {
-    local backup_dir="/var/backups/site-vault"
-
-    # Parse command-line options
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            --version)
-                echo "SiteVault version $SCRIPT_VERSION"
-                exit 0
-                ;;
-            --update)
-                check_for_updates
-                exit 0
-                ;;
-            --backup-dir)
-                backup_dir="$2"
-                shift 2
-                ;;
-            *)
-                echo "Unknown option: $1"
-                exit 1
-                ;;
-        esac
-    done
+    if [[ "$1" == "--version" ]]; then
+        echo "SiteVault version $SCRIPT_VERSION"
+        exit 0
+    elif [[ "$1" == "--update" ]]; then
+        check_for_updates
+        exit 0
+    fi
 
     echo "Welcome to SiteVault v$SCRIPT_VERSION!"
 
@@ -212,18 +187,15 @@ main() {
     local selected_project="$project"
 
     # Get project directory
-    local config_file=$(find /etc/apache2/sites-available -name "*$selected_project*.conf" -o -name "*www.$selected_project*.conf" 2>/dev/null | head -1)
+    local config_file=$(find /etc/apache2/sites-available /etc/nginx/sites-available -name "*$selected_project*.conf" -o -name "*www.$selected_project*.conf" 2>/dev/null | grep -v "ssl" | head -1)
     local project_dir=$(get_project_directory "$config_file" "$selected_project")
 
     # Create backup
-    echo "Do you want to proceed with the backup? (y/n)"
-    read -r proceed
-    if [[ $proceed =~ ^[Yy]$ ]]; then
-        local backup_file=$(create_backup "$project_dir" "$backup_dir" "$selected_project")
-    else
-        echo "Backup cancelled."
-        exit 0
-    fi
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local backup_name="${selected_project}_${timestamp}.tar.gz"
+    echo "Creating backup..."
+    tar -czvf "$backup_name" -C "$(dirname "$project_dir")" "$(basename "$project_dir")"
+    echo "Backup created: $backup_name"
 
     # Ask about transfer
     read -p "Do you want to transfer this backup to another server? (y/n): " transfer_choice
@@ -236,7 +208,7 @@ main() {
 
         # Transfer file
         echo "Transferring file..."
-        scp -P "$server_port" "$backup_file" "$server_user@$server_ip:$dest_folder/"
+        scp -P "$server_port" "$backup_name" "$server_user@$server_ip:$dest_folder/"
         if [ $? -eq 0 ]; then
             echo "Transfer completed successfully!"
         else
@@ -246,7 +218,7 @@ main() {
         # Ask about deleting local backup
         read -p "Do you want to delete the local backup file? (y/n): " delete_choice
         if [[ $delete_choice =~ ^[Yy]$ ]]; then
-            rm "$backup_file"
+            rm "$backup_name"
             echo "Local backup deleted."
         fi
     else

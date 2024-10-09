@@ -49,6 +49,16 @@ After installation, you can run SiteVault by typing `site-vault` in your termina
 
 ## Changelog
 
+### Version 1.2.0
+
+- Added support for Nginx configurations alongside Apache.
+- Improved server name detection to prioritize www prefixed ServerName or ServerAlias.
+- Enhanced project directory detection for both Apache and Nginx configurations.
+- Updated backup filename to include a timestamp for better organization.
+- Improved handling of SSL configurations, now properly ignoring SSL-specific files when selecting the main configuration.
+- Enhanced error handling and user feedback throughout the script.
+- Updated the script to work with both /etc/apache2/sites-available and /etc/nginx/sites-available directories.
+
 ### Version 1.1.13
 
 - Improved handling of projects where the DocumentRoot ends with 'public' or 'web' directories.
